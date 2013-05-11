@@ -11,6 +11,7 @@ import (
 	"github.com/PuerkitoBio/ghost/templates"
 	_ "github.com/PuerkitoBio/ghost/templates/amber"
 	_ "github.com/PuerkitoBio/ghost/templates/gotpl"
+	"github.com/howeyc/fsnotify"
 )
 
 const (
@@ -38,8 +39,14 @@ func serveTemplate(w http.ResponseWriter, r *http.Request) {
 func main() {
 	log.SetFlags(0)
 
-	err := templates.CompileDir(templateDir)
+	if err := templates.CompileDir(templateDir); err != nil {
+		panic(err)
+	}
+	w, err := fsnotify.NewWatcher()
 	if err != nil {
+		panic(err)
+	}
+	if err := w.Watch(templateDir); err != nil {
 		panic(err)
 	}
 
