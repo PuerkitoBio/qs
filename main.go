@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -18,20 +19,34 @@ import (
 )
 
 const (
-	publicDir        = "./public/"
-	templateDir      = "./templates/"
-	port             = 9000
+	defPublicDir     = "./public/"
+	defTemplateDir   = "./templates/"
+	defPort          = 9000
 	tmplRefreshDelay = 2 * time.Second
 	faviconCache     = 1 * time.Minute
 )
 
 var (
+	// Flags values
+	publicDir   string
+	templateDir string
+	port        int
+
 	faviconPath   = path.Join(publicDir, "favicon.ico")
 	staticHandler = http.StripPrefix("/public/", http.FileServer(http.Dir(publicDir)))
 
 	// Protect the templates
 	tmplLock sync.RWMutex
 )
+
+func init() {
+	flag.StringVar(&publicDir, "public-dir", defPublicDir, "set the public directory for static assets")
+	flag.StringVar(&publicDir, "p", defPublicDir, "shorthand for -public-dir")
+	flag.StringVar(&templateDir, "template-dir", defTemplateDir, "set the templates directory")
+	flag.StringVar(&templateDir, "t", defTemplateDir, "shorthand for -template-dir")
+	flag.IntVar(&port, "port", defPort, "set the port number")
+	flag.IntVar(&port, "P", defPort, "shorthand for -port")
+}
 
 func serveTemplate(w http.ResponseWriter, r *http.Request) {
 	// If a template matches the path, minus the starting /
@@ -48,7 +63,8 @@ func refreshTemplates() {
 	tmplLock.Lock()
 	defer tmplLock.Unlock()
 	if err := templates.CompileDir(templateDir); err != nil {
-		log.Fatal(err)
+		// Do not stop if templates directory does not exist or has an invalid template
+		log.Println(err)
 	}
 }
 
@@ -74,7 +90,7 @@ func watchDir(watcher *fsnotify.Watcher) {
 
 func watchRecursive(w *fsnotify.Watcher) {
 	filepath.Walk(templateDir, func(path string, fi os.FileInfo, err error) error {
-		if fi.IsDir() {
+		if fi != nil && fi.IsDir() {
 			if err := w.Watch(path); err != nil {
 				log.Fatal(err)
 			}
@@ -84,6 +100,8 @@ func watchRecursive(w *fsnotify.Watcher) {
 }
 
 func main() {
+	flag.Parse()
+
 	log.SetFlags(0)
 
 	// Initial compilation of the templates, then activate the watcher
