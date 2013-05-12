@@ -99,6 +99,7 @@ func watchRecursive(w *fsnotify.Watcher) {
 	})
 }
 
+// TODO : Show a default index.html page with all available links?
 func main() {
 	flag.Parse()
 
@@ -131,6 +132,6 @@ func main() {
 	// Start it up.
 	log.Printf("server listening on port %d", port)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
